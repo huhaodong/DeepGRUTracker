@@ -1,5 +1,9 @@
 import util.getArgs as getArgs
+import trainDeepGRUTracker as train
 
 if __name__=='__main__':
     cmdargs = getArgs.getCmdArgs()
-    print(cmdargs.max_target_number)
+    if cmdargs.is_train:
+        train.train(cmdargs)
+    else:
+        pass

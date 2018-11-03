@@ -5,6 +5,8 @@ from tensorflow import nn
 def deepGRUNet(
     input
     ,_scopeName
+    ,is_train=False
+    ,keep_prob=0.5
     ,_reuseFlage=True
     ,n_layer=1
     ,n_hidden=128
@@ -13,10 +15,13 @@ def deepGRUNet(
     ''' return a deep GRU net for product the bboxs'''
 
     stacked_rnn=[]
-    with tf.variable_scope(_scopeName,reuse=_reuseFlage) as scope:
-        for _ in range(n_layer):
-            stacked_rnn.append(rnn.GRUCell(n_hidden))
-        mcell = rnn.MultiRNNCell(stacked_rnn)
-        output,_=nn.dynamic_rnn(mcell,input,dtype=tf.float64) # get deep GRU Net output
+    # with tf.variable_scope(_scopeName,reuse=_reuseFlage) as scope:
+    for _ in range(n_layer):
+        grucell = rnn.GRUCell(n_hidden)
+        if is_train:
+            grucell = nn.rnn_cell.DropoutWrapper(grucell,output_keep_prob=keep_prob)
+        stacked_rnn.append(grucell)
+    mcell = rnn.MultiRNNCell(stacked_rnn)
+    output,_=nn.dynamic_rnn(mcell,input,dtype=tf.float32) # get deep GRU Net output
 
     return output

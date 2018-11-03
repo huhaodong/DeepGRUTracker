@@ -1,21 +1,23 @@
 import tensorflow as tf 
-import vgg.vgg16 as vgg16
-import deepGRU as deepGRU
+import model.vgg16 as vgg16
+import model.deepGRU as deepGRU
 
 class DeepGRUTracker:
 
     def __init__(self,opt):
 
-        inputImage = opt.input_image
-        inputDet = opt.input_det
-        maxTargetNumber = opt.superOpt.max_target_number
-        detDim = opt.superOpt.det_dim
-        inputHSize = opt.superOpt.input_h_size
-        inputWSize = opt.superOpt.input_w_size
-        vgg16NpyPath = opt.superOpt.vgg16_npy_path
-        gruHideSize = opt.superOpt.gru_hide_size
-        product_dim = opt.superOpt.product_dim
-        fc3HiddenSize = opt.superOpt.fc_3_hidden_size
+        inputImage = opt["input_image"]
+        inputDet = opt["input_det"]
+        maxTargetNumber = opt["superOpt"].max_target_number
+        detDim = opt["superOpt"].det_dim
+        inputHSize = opt["superOpt"].input_h_size
+        inputWSize = opt["superOpt"].input_w_size
+        vgg16NpyPath = opt["superOpt"].vgg16_npy_path
+        gruHideSize = opt["superOpt"].gru_hide_size
+        product_dim = opt["superOpt"].product_dim
+        fc3HiddenSize = opt["superOpt"].fc_3_hidden_size
+        gruKeepProb = opt["superOpt"].gru_keep_prob
+        isTrain = opt["superOpt"].is_train
 
         # fc1 in order to weight the input det
         self.x_det = tf.reshape(inputDet,[-1,maxTargetNumber*detDim],name='reshape_det_dim')  #shape [batch_size*(max_target_number*det_dim)]
@@ -41,7 +43,7 @@ class DeepGRUTracker:
 
         # deep GRU net
         self.hid_4 = tf.reshape(self.fc_2,[-1,maxTargetNumber,gruHideSize],name='hid_4') #shape [batch_size*max_target_number*gru_hide_size]
-        self.hid_5 = deepGRU.deepGRUNet(self.hid_4,_scopeName='deep_gru',n_layer=1,n_hidden=gruHideSize) #shape [batch_size*max_target_number*gru_hide_size]
+        self.hid_5 = deepGRU.deepGRUNet(self.hid_4,_scopeName='deep_gru',is_train=isTrain,keep_prob=gruKeepProb,n_layer=1,n_hidden=gruHideSize) #shape [batch_size*max_target_number*gru_hide_size]
 
         # fc3
         self.hid_5 = tf.reshape(self.hid_5,[-1,maxTargetNumber*gruHideSize],name='hid_5')   #shape [batch_size*(max_target_number*gru_hide_size)]
@@ -49,4 +51,4 @@ class DeepGRUTracker:
 
         # fc4
         self.fc_4 = tf.layers.dense(self.fc_3,maxTargetNumber*product_dim,activation=tf.nn.relu,name='fc_4')    #shape [batch_size*(maxTargetNumber*product_dim)]
-        self.hid_6 = tf.reshape(self.fc_4,[-1,maxTargetNumber,product_dim],name=hid_6)  #shape [batch_size*maxTargetNumber*product_dim]
+        self.hid_6 = tf.reshape(self.fc_4,[-1,maxTargetNumber,product_dim],name="hid_6")  #shape [batch_size*maxTargetNumber*product_dim]
