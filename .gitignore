@@ -1,2 +1,5 @@
 __pycache__
 *.npy
+data/log/*
+data/model/*
+data/vgg/model_npy/*

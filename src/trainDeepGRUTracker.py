@@ -30,7 +30,7 @@ def train(opt):
     loss = tf.reduce_mean(tf.pow(tf.subtract(inputGt,tracker.hid_6),2.0))
     tf.summary.scalar("loss_function",loss)
 
-    optimiz = tf.train.AdamOptimizer(0.04)
+    optimiz = tf.train.AdamOptimizer(0.003)
     train = optimiz.minimize(loss)
 
     init = tf.global_variables_initializer()
@@ -38,30 +38,32 @@ def train(opt):
     tfconfig = tf.ConfigProto(log_device_placement=True,allow_soft_placement=True)
 
     saver = tf.train.Saver(max_to_keep=3)
-
+    loade_epoch = 99
     with tf.Session(config=tfconfig) as sess:
-        with tf.device("/gpu:1"):
-            
-            sess.run(init)
+        with tf.device("/GPU:1"):
 
+            sess.run(init)
+            saver.restore(sess,os.path.join(modelSavePath,"deep_GRU_tracker.cpkt-"+str(loade_epoch)))
             merged_summary_op = tf.summary.merge_all()
             summary_writer = tf.summary.FileWriter(summaryLogSavePath,sess.graph)
-
-            for i in range(1,epoch+1):
+            loopEnd = epoch+1
+            loopStart = loade_epoch+1
+            for i in range(loopStart,loopEnd):
                 dataLoder = loadData.DataLoader(opt)
                 dataLoder.flashLoader()
                 data = dataLoder.next()
-                loss = 0
+                
                 while True:
-                    if data['img'] ==None or data['det']==None:
+                    if data['img'] == [] or data['det']==[]:
                         break
-                    _,loss = sess.run([train,loss],feed_dict={inputImage:data['img'],inputDet:data['det'],inputGt:data['gt']})
+                    _,ret_loss = sess.run([train,loss],feed_dict={inputImage:data['img'],inputDet:data['det'],inputGt:data['gt']})
                     summary_str = sess.run(merged_summary_op,feed_dict={inputImage:data['img'],inputDet:data['det'],inputGt:data['gt']})
                     summary_writer.add_summary(summary_str,i)
                     data = dataLoder.next()
                     
                 dataLoder.endLoader()
+                print('epoch:',str(i)," finished!")
                 if i%modelSaveEpoch==0:
                     savePath = os.path.join(modelSavePath,"deep_GRU_tracker.cpkt")
                     saver.save(sess,savePath,global_step=i)
-                    print('eopch=',str(i))
+                    # print('epoch=',str(i))

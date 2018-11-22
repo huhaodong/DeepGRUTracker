@@ -31,7 +31,7 @@ class DeepGRUTracker:
         # get featch map using vgg16
         self.vgg16net = vgg16.Vgg16(vgg16_npy_path=vgg16NpyPath)
         self.vgg16net.build(self.hid_2)
-        self.hid_3 = self.vgg16net.pool5    #shape [batch_size*34*60*512]
+        self.hid_3 = self.vgg16net.pool5    #shape [batch_size*14*14*512]
 
         # fc2
         featchMapDim = 1

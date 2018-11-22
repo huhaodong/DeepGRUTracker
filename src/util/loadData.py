@@ -72,7 +72,7 @@ class DataLoader:
             
     def nextimg(self):
         index = self.imgIndexTrans%self.loaderIndex
-        ret = None
+        ret = []
         if index in self.imgCache:
             ret = self.imgCache[index]
             del self.imgCache[index]
@@ -82,13 +82,13 @@ class DataLoader:
         return ret
     
     def nextdet(self):
-        ret = None
+        ret = []
         if self.loaderIndex<=len(self.detCache):
             ret = self.detCache[self.loaderIndex-1]
         return ret
 
     def nextgt(self):
-        ret = None
+        ret = []
         if self.loaderIndex<=len(self.gtCache):
             ret = self.gtCache[self.loaderIndex-1]
         return ret
@@ -158,7 +158,7 @@ class DataLoader:
                         tmp[index][targetindex] = [float(list[2]),float(list[3]),float(list[4]),float(list[5])]
                             
             batch.append(tmp)
-        self.detCache = self.makeGtTarget(batch,maxIndex,self.productDim)
+        self.gtCache = self.makeGtTarget(batch,maxIndex,self.productDim)
 
     def makeGtTarget(self,batch,maxIndex,dim):
         ret = []
@@ -185,15 +185,15 @@ class DataLoader:
     def cacheimg(self):
         index =self.imgCacheIndex
         strIndex = self.imgIndexTrans%index
-        if index in self.imgCache and self.imgCache[strIndex] == None:
-            return None
+        if strIndex in self.imgCache and self.imgCache[strIndex] == []:
+            self.imgCache[strIndex] = []
         else:
             batchPathList = []
             for i in range(self.batchSize):
                 path = os.path.join(self.workPath,self.workDirs[i])
                 batchPathList.append(path)
             for _ in range(self.imgCacheSize):
-                index += 1
+                
                 imgarray = []
                 strIndex = self.imgIndexTrans%index
                 imgname = strIndex+self.imgFileType
@@ -210,9 +210,10 @@ class DataLoader:
                         # reshapeimg = img.reshape((1,1080,1920,3))
                         imgarray.append(resized_img)
                 if len(imgarray)==0:
-                    self.imgCache[strIndex]=None
+                    self.imgCache[strIndex]=[]
                     break
                 else:
                     imgbatch = np.concatenate(imgarray,0)
                     self.imgCache[strIndex]=imgbatch
+                index += 1
             self.imgCacheIndex = index
