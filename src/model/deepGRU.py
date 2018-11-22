@@ -23,5 +23,5 @@ def deepGRUNet(
         stacked_rnn.append(grucell)
     mcell = rnn.MultiRNNCell(stacked_rnn)
     output,_=nn.dynamic_rnn(mcell,input,dtype=tf.float32) # get deep GRU Net output
-
+    output = tf.transpose(output,[1,0,2])
     return output

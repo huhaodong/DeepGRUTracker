@@ -15,6 +15,7 @@ def train(opt):
     # batchSize = opt.batch_size
     # trainPath = opt.train_path
     epoch = opt.epoch
+    loadEpoch = opt.load_epoch
     modelSavePath = opt.model_save_path
     modelSaveEpoch = opt.model_save_epoch
     summaryLogSavePath = opt.summary_log_save_path
@@ -30,7 +31,7 @@ def train(opt):
     loss = tf.reduce_mean(tf.pow(tf.subtract(inputGt,tracker.hid_6),2.0))
     tf.summary.scalar("loss_function",loss)
 
-    optimiz = tf.train.AdamOptimizer(0.003)
+    optimiz = tf.train.AdamOptimizer(0.001)
     train = optimiz.minimize(loss)
 
     init = tf.global_variables_initializer()
@@ -38,16 +39,16 @@ def train(opt):
     tfconfig = tf.ConfigProto(log_device_placement=True,allow_soft_placement=True)
 
     saver = tf.train.Saver(max_to_keep=3)
-    loade_epoch = 99
     with tf.Session(config=tfconfig) as sess:
         with tf.device("/GPU:1"):
 
             sess.run(init)
-            saver.restore(sess,os.path.join(modelSavePath,"deep_GRU_tracker.cpkt-"+str(loade_epoch)))
+            if loadEpoch != 0:
+                saver.restore(sess,os.path.join(modelSavePath,"deep_GRU_tracker.cpkt-"+str(loadEpoch)))
             merged_summary_op = tf.summary.merge_all()
             summary_writer = tf.summary.FileWriter(summaryLogSavePath,sess.graph)
             loopEnd = epoch+1
-            loopStart = loade_epoch+1
+            loopStart = loadEpoch+1
             for i in range(loopStart,loopEnd):
                 dataLoder = loadData.DataLoader(opt)
                 dataLoder.flashLoader()

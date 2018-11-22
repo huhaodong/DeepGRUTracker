@@ -2,12 +2,15 @@ import skimage
 import skimage.io
 import os
 import numpy as np
+import cv2
 
 class DataLoader:
     def __init__(self,opt):
         self.batchSize = opt.batch_size
         self.dataPath = opt.data_path
         self.isTrain = opt.is_train
+        self.imgResizeW = opt.img_resize_w
+        self.imgResizeH = opt.img_resize_h
         self.trainFolderName = opt.train_folder_name
         self.trainImageFolderName = opt.train_image_folder_name
         self.trainDetFolderName = opt.train_det_folder_name
@@ -200,15 +203,22 @@ class DataLoader:
                 for path in batchPathList:
                     imgPath = os.path.join(path,self.trainImageFolderName,imgname)
                     if os.path.exists(imgPath):
-                        img = skimage.io.imread(imgPath)
+                        # img = skimage.io.imread(imgPath)
+                        img = cv2.imread(imgPath,cv2.IMREAD_COLOR)
+                        w,h,c = img.shape
+                        dim_diff = np.abs(h - w)
+                        pad1, pad2 = dim_diff // 2, dim_diff - dim_diff // 2
+                        pad = ((pad1, pad2), (0, 0), (0, 0)) if h >= w else ((0, 0), (pad1, pad2), (0, 0))
+                        img = np.pad(img, pad, 'constant', constant_values=0)
                         img = img / 255.0
-                        short_edge = min(img.shape[:2])
-                        yy = int((img.shape[0] - short_edge) / 2)
-                        xx = int((img.shape[1] - short_edge) / 2)
-                        crop_img = img[yy: yy + short_edge, xx: xx + short_edge]
-                        resized_img = skimage.transform.resize(crop_img, (224, 224))[None, :, :, :]
-                        # reshapeimg = img.reshape((1,1080,1920,3))
-                        imgarray.append(resized_img)
+                        img = skimage.transform.resize(img, (self.imgResizeH, self.imgResizeW))
+                        # short_edge = min(img.shape[:2])
+                        # yy = int((img.shape[0] - short_edge) / 2)
+                        # xx = int((img.shape[1] - short_edge) / 2)
+                        # crop_img = img[yy: yy + short_edge, xx: xx + short_edge]
+                        # resized_img = skimage.transform.resize(crop_img, (224, 224))[None, :, :, :]
+                        reshapeimg = img.reshape((1,self.imgResizeH,self.imgResizeW,c))
+                        imgarray.append(reshapeimg)
                 if len(imgarray)==0:
                     self.imgCache[strIndex]=[]
                     break
