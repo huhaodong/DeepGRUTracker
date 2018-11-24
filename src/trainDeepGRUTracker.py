@@ -2,6 +2,7 @@ import tensorflow as tf
 import util.loadData as loadData
 import model.deepGRUTracker as deepGRUTracker
 import os
+import numpy as np
 
 def train(opt):
     ''' train deep GRU tracker '''
@@ -10,8 +11,8 @@ def train(opt):
     # gruHideSize = opt.gru_hide_size
     productDim = opt.product_dim
     # productHiddenSize = opt.product_hidden_size
-    inputWSize = opt.input_w_size
-    inputHSize = opt.input_h_size
+    inputWSize = opt.img_resize_w
+    inputHSize = opt.img_resize_h
     # batchSize = opt.batch_size
     # trainPath = opt.train_path
     epoch = opt.epoch
@@ -19,13 +20,24 @@ def train(opt):
     modelSavePath = opt.model_save_path
     modelSaveEpoch = opt.model_save_epoch
     summaryLogSavePath = opt.summary_log_save_path
+    allFeatureDim = opt.all_feature_dim
+    sequenceSize = opt.sequence_size
+    bantchSize = opt.batch_size
     # featrueHiddenSize = 34*60*512
 
     inputImage = tf.placeholder(tf.float32,shape=[None,inputHSize,inputWSize,3],name='input_images')
     inputDet = tf.placeholder(tf.float32,shape=[None,maxTargetNumber,detDim],name='input_det')
     inputGt = tf.placeholder(tf.float32,shape=[None,maxTargetNumber,productDim],name='gt')
 
-    modelArgs = {'input_image':inputImage,'input_det':inputDet,'superOpt':opt}
+    tmpSequence = tf.placeholder(tf.float32,shape=[None,sequenceSize,allFeatureDim],name='tmp_sequence')
+
+    modelArgs = {
+        'input_image':inputImage,
+        'input_det':inputDet, 
+        'sequence':tmpSequence,
+        'superOpt':opt
+        }
+
     tracker = deepGRUTracker.DeepGRUTracker(modelArgs)
 
     loss = tf.reduce_mean(tf.pow(tf.subtract(inputGt,tracker.hid_6),2.0))
@@ -40,7 +52,7 @@ def train(opt):
 
     saver = tf.train.Saver(max_to_keep=3)
     with tf.Session(config=tfconfig) as sess:
-        with tf.device("/GPU:1"):
+        with tf.device("/gpu:1"):
 
             sess.run(init)
             if loadEpoch != 0:
@@ -53,13 +65,31 @@ def train(opt):
                 dataLoder = loadData.DataLoader(opt)
                 dataLoder.flashLoader()
                 data = dataLoder.next()
-                
+                # sequence = tf.Variable(tf.zeros([bantchSize,sequenceSize,allFeatureDim]),tf.float32)
+                sequence = np.zeros((bantchSize,sequenceSize,allFeatureDim))
                 while True:
                     if data['img'] == [] or data['det']==[]:
                         break
-                    _,ret_loss = sess.run([train,loss],feed_dict={inputImage:data['img'],inputDet:data['det'],inputGt:data['gt']})
-                    summary_str = sess.run(merged_summary_op,feed_dict={inputImage:data['img'],inputDet:data['det'],inputGt:data['gt']})
+                    _,hid9 = sess.run([train,tracker.hid_9],feed_dict={inputImage:data['img'],
+                        inputDet:data['det'],
+                        inputGt:data['gt'],
+                        tmpSequence:sequence
+                        })
+
+                    summary_str = sess.run(merged_summary_op,feed_dict={inputImage:data['img'],
+                        inputDet:data['det'],
+                        inputGt:data['gt'],
+                        tmpSequence:sequence
+                        })
                     summary_writer.add_summary(summary_str,i)
+                    
+                    #new sequence
+                    # _,keepSeq = tf.split(1,sequence,[1,sequenceSize-1])
+                    # sequence = tf.concat(axis=1,values=[keepSeq,hid9])
+                    seqlist = np.split(sequence,[1],1)
+                    # hid9Numpy = hid9.eval(session=sess)
+                    sequence = np.concatenate((seqlist[-1],hid9),axis=1)
+
                     data = dataLoder.next()
                     
                 dataLoder.endLoader()

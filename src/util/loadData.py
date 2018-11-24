@@ -3,6 +3,7 @@ import skimage.io
 import os
 import numpy as np
 import cv2
+import configparser
 
 class DataLoader:
     def __init__(self,opt):
@@ -17,6 +18,7 @@ class DataLoader:
         self.trainGtFolderName = opt.train_Gt_folder_name
         self.trainDetFileName = opt.train_det_file_name
         self.trainGtFileName = opt.train_Gt_file_name
+        self.sequenceInfoFileName = opt.sequence_info_file_name
         self.testFolderName = opt.test_folder_name
         self.testImageFolderName = opt.test_image_folder_name
         self.testDetFolderName = opt.test_det_folder_name
@@ -33,6 +35,9 @@ class DataLoader:
         self.imgCache = {}
         self.detCache = []
         self.gtCache = []
+        self.seqinfoList = []
+        self.seqPicInfo = []
+        self.conf = configparser.ConfigParser()
 
         if self.isTrain:
             self.workPath = os.path.join(self.dataPath,self.trainFolderName)
@@ -48,8 +53,19 @@ class DataLoader:
     def flashLoader(self):
         self.loaderIndex = self.imgBeginIndex
         self.imgCacheIndex = self.imgBeginIndex
-        self.cachedet()
+        
+        for i in range(self.batchSize):
+            path = os.path.join(self.workPath,self.workDirs[i],self.sequenceInfoFileName)
+            if os.path.exists(path):
+                self.conf.read(path)
+                self.seqinfoList.append(self.conf.getint("Sequence","seqLength"))
+                self.seqPicInfo.append({
+                    "height":self.conf.getint("Sequence","imHeight"),
+                    "width":self.conf.getint("Sequence","imWidth")
+                    })
+
         self.cacheimg()
+        self.cachedet()
         self.cachegt()
 
     def endLoader(self):
@@ -119,24 +135,38 @@ class DataLoader:
                                 tmp[index].append([float(list[2]),float(list[3]),float(list[4]),float(list[5]),float(list[6])])
                             
             batch.append(tmp)
-        self.detCache = self.makeDetTarget(batch,maxIndex,self.detDim)
+        # batch = self.alignFrame(batch,self.detDim)
+        self.detCache = self.alignDetTarget(batch,self.detDim)
 
-    def makeDetTarget(self,batch,maxIndex,dim):
+    # def alignFrame(self,batch,dim):
+    #     ''' 
+    #         align the detection map
+    #         det: [{1:[[x,y,w,h]]},{}] # batch_size*{}
+    #     '''
+    #     maxlen = max(self.seqinfoList)
+    #     for i in range(1,maxlen+1):
+    #         for j in batch:
+    #             if i not in j:
+    #                 j[i] = [[float(0)]*dim]
+        
+    def alignDetTarget(self,batch,dim):
         ret = []
-        for i in range(maxIndex):
+        maxlen = max(self.seqinfoList)
+        for i in range(1,maxlen+1):
             tmp = []
             for j in range(len(batch)):
                 map = batch[j]
-                if i+1 in map:
-                    subitem = self.fillDetTarget(map[i+1],dim)
-                    tmp.append(np.array(subitem).reshape(1,self.maxTargetNumber,dim))
+                if i not in map:
+                    map[i] = [[float(0)]*dim]
+                subitem = self.fillDetTarget(map[i],dim)
+                tmp.append(np.array(subitem).reshape(1,self.maxTargetNumber,dim))
             tmp_2 = np.concatenate(tmp,0)
-            ret.append(tmp_2)
+            ret.append(tmp_2)   #shape [sequence*bantchSize*maxTargetNumber*detDim]
         return ret
 
     def fillDetTarget(self,batch,dim):
-        for i in range(self.maxTargetNumber-len(batch)):
-            batch.append([0]*dim)
+        for _ in range(self.maxTargetNumber-len(batch)):
+            batch.append([float(0)]*dim)
         return batch
 
     def cachegt(self):
@@ -161,19 +191,29 @@ class DataLoader:
                         tmp[index][targetindex] = [float(list[2]),float(list[3]),float(list[4]),float(list[5])]
                             
             batch.append(tmp)
-        self.gtCache = self.makeGtTarget(batch,maxIndex,self.productDim)
+        self.gtCache = self.alignGtTarget(batch,self.productDim)
 
-    def makeGtTarget(self,batch,maxIndex,dim):
+    def alignGtTarget(self,batch,dim):
+        '''
+            batch:[{frame:{target:[x,y,w,h]}},...]
+        '''
         ret = []
-        for i in range(maxIndex):
+        maxlen = max(self.seqinfoList)
+        for i in range(1,maxlen+1):
             tmp = []
             for j in range(len(batch)):
                 map = batch[j]
-                if i+1 in map:
-                    subitem = self.fillGtTarget(map[i+1],dim)
-                    tmp.append(np.array(subitem).reshape(1,self.maxTargetNumber,dim))
+                if i not in map:
+                    map[i] = self.alignGtFrame(dim)
+                subitem = self.fillGtTarget(map[i],dim)
+                tmp.append(np.array(subitem).reshape(1,self.maxTargetNumber,dim))
             tmp_2 = np.concatenate(tmp,0)
-            ret.append(tmp_2)
+            ret.append(tmp_2)   #shape [sequence*bantchSize*maxTargetNumber*dim]
+        return ret
+
+    def alignGtFrame(self,dim):
+        ret = {}
+        ret[1] = [float(0)]*dim
         return ret
 
     def fillGtTarget(self,batch,dim):
@@ -183,9 +223,13 @@ class DataLoader:
                 ret.append(batch[i])
             else:
                 ret.append([0]*dim)
+        #shape [maxTargetNumber*dim]
         return ret
 
     def cacheimg(self):
+
+        maxlen = max(self.seqinfoList)  #max frame
+
         index =self.imgCacheIndex
         strIndex = self.imgIndexTrans%index
         if strIndex in self.imgCache and self.imgCache[strIndex] == []:
@@ -198,27 +242,36 @@ class DataLoader:
             for _ in range(self.imgCacheSize):
                 
                 imgarray = []
-                strIndex = self.imgIndexTrans%index
-                imgname = strIndex+self.imgFileType
-                for path in batchPathList:
-                    imgPath = os.path.join(path,self.trainImageFolderName,imgname)
-                    if os.path.exists(imgPath):
-                        # img = skimage.io.imread(imgPath)
-                        img = cv2.imread(imgPath,cv2.IMREAD_COLOR)
-                        w,h,c = img.shape
-                        dim_diff = np.abs(h - w)
-                        pad1, pad2 = dim_diff // 2, dim_diff - dim_diff // 2
-                        pad = ((pad1, pad2), (0, 0), (0, 0)) if h >= w else ((0, 0), (pad1, pad2), (0, 0))
-                        img = np.pad(img, pad, 'constant', constant_values=0)
-                        img = img / 255.0
-                        img = skimage.transform.resize(img, (self.imgResizeH, self.imgResizeW))
-                        # short_edge = min(img.shape[:2])
-                        # yy = int((img.shape[0] - short_edge) / 2)
-                        # xx = int((img.shape[1] - short_edge) / 2)
-                        # crop_img = img[yy: yy + short_edge, xx: xx + short_edge]
-                        # resized_img = skimage.transform.resize(crop_img, (224, 224))[None, :, :, :]
-                        reshapeimg = img.reshape((1,self.imgResizeH,self.imgResizeW,c))
-                        imgarray.append(reshapeimg)
+                if index>maxlen:
+                    pass
+                else:
+                    strIndex = self.imgIndexTrans%index
+                    imgname = strIndex+self.imgFileType
+                    for i in range(len(batchPathList)):
+                        path = batchPathList[i]
+                        imgPath = os.path.join(path,self.trainImageFolderName,imgname)
+                        if os.path.exists(imgPath):
+                            # img = skimage.io.imread(imgPath)
+                            img = cv2.imread(imgPath,cv2.IMREAD_COLOR)
+                            w,h,c = img.shape
+                            dim_diff = np.abs(h - w)
+                            pad1, pad2 = dim_diff // 2, dim_diff - dim_diff // 2
+                            pad = ((pad1, pad2), (0, 0), (0, 0)) if h >= w else ((0, 0), (pad1, pad2), (0, 0))
+                            img = np.pad(img, pad, 'constant', constant_values=0)
+                            img = img / 255.0
+                            img = skimage.transform.resize(img, (self.imgResizeH, self.imgResizeW))
+                            # short_edge = min(img.shape[:2])
+                            # yy = int((img.shape[0] - short_edge) / 2)
+                            # xx = int((img.shape[1] - short_edge) / 2)
+                            # crop_img = img[yy: yy + short_edge, xx: xx + short_edge]
+                            # resized_img = skimage.transform.resize(crop_img, (224, 224))[None, :, :, :]
+                            reshapeimg = img.reshape((1,self.imgResizeH,self.imgResizeW,c))
+                            imgarray.append(reshapeimg)
+                        else:
+                            # picInfoMap = self.seqPicInfo[i]
+                            bpic = np.zeros((1,self.imgResizeH,self.imgResizeW,3))
+                            imgarray.append(bpic)
+                
                 if len(imgarray)==0:
                     self.imgCache[strIndex]=[]
                     break
