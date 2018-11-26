@@ -79,7 +79,7 @@ def train(opt):
                 while True:
                     if data['img'] == [] or data['det'] == []:
                         break
-                    _, hid9 = sess.run([train, tracker.hid_9], feed_dict={inputImage: data['img'],
+                    _, nor_2 = sess.run([train, tracker.nor_2], feed_dict={inputImage: data['img'],
                                                                           inputDet: data['det'],
                                                                           inputGt: data['gt'],
                                                                           tmpSequence: sequence
@@ -97,7 +97,7 @@ def train(opt):
                     # sequence = tf.concat(axis=1,values=[keepSeq,hid9])
                     seqlist = np.split(sequence, [1], 1)
                     # hid9Numpy = hid9.eval(session=sess)
-                    sequence = np.concatenate((seqlist[-1], hid9), axis=1)
+                    sequence = np.concatenate((seqlist[-1], nor_2), axis=1)
 
                     data = dataLoder.next()
 

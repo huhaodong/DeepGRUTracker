@@ -43,7 +43,7 @@ def getCmdArgs():
     parser.add_argument("--gru_keep_prob",help="set gru keep prob",default=0.8)
     parser.add_argument("--nn_keep_prob",help="set fc keep prob",default=0.8)
     parser.add_argument("--learn_rate",help="set learnning rate",default=0.01)
-    parser.add_argument("--gru_larys",help="set fc keep prob",default=2)
+    parser.add_argument("--gru_larys",help="set fc keep prob",default=5)
     parser.add_argument("--model_save_path",help="set model save path",default='F:\\work\\workspace\\DeepGRUTracker\\data\\model')
     parser.add_argument("--model_save_epoch",help="set model save epoch",default=3)
     parser.add_argument("--summary_log_save_path",help="set model summary save path",default='F:\\work\\workspace\\DeepGRUTracker\\data\\log')

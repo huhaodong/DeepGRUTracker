@@ -65,6 +65,7 @@ class DeepGRUTracker:
                 # normalization
                 self.nor_1 = tf.nn.l2_normalize(self.fc_2, axis=1)
                 self.nor_2 = tf.nn.l2_normalize(self.fc_1, axis=1)
+                
                 self.nor_1_shape = self.nor_1.get_shape().as_list()
                 self.nor_2_shape = self.nor_2.get_shape().as_list()
 
@@ -104,21 +105,21 @@ class DeepGRUTracker:
                 self.fc_5 = tf.layers.dense(self.fc_4,maxTargetNumber*productDim,name='fc_5')    #shape [batch_size*(maxTargetNumber*productDim)]
                 self.hid_6 = tf.reshape(self.fc_5,[-1,maxTargetNumber,productDim],name="hid_6")  #shape [batch_size*maxTargetNumber*productDim] product output
 
-                # loop fc6
-                self.hid_7 = tf.reshape(self.hid_6,[-1,maxTargetNumber*productDim],name='hid_7')  #shape [batch_size*(max_target_number*productDim)]
-                self.fc_6 = tf.layers.dense(self.hid_7,detFeatureDim,activation=tf.nn.relu,name='fc_6') #shape [batch_size*detFeatureDim]
-                self.fc_6 = tf.nn.dropout(self.fc_6,nnKeepProb)
+                # # loop fc6
+                # self.hid_7 = tf.reshape(self.hid_6,[-1,maxTargetNumber*productDim],name='hid_7')  #shape [batch_size*(max_target_number*productDim)]
+                # self.fc_6 = tf.layers.dense(self.hid_7,detFeatureDim,activation=tf.nn.relu,name='fc_6') #shape [batch_size*detFeatureDim]
+                # self.fc_6 = tf.nn.dropout(self.fc_6,nnKeepProb)
                 
-                # loop product normalize
-                self.nor_3 = tf.nn.l2_normalize(self.fc_6, axis=1)
+                # # loop product normalize
+                # self.nor_3 = tf.nn.l2_normalize(self.fc_6, axis=1)
 
-                # concat pic feature map and product feature
-                self.hid_8 = tf.concat(values=[self.nor_1,self.nor_3],axis=1, name='hid_8')  #shape [batch_size*(picFeatureDim+detFeatureDim)]
+                # # concat pic feature map and product feature
+                # self.hid_8 = tf.concat(values=[self.nor_1,self.nor_3],axis=1, name='hid_8')  #shape [batch_size*(picFeatureDim+detFeatureDim)]
 
-                # loop fc7
-                self.fc_7 = tf.layers.dense(self.hid_8,allFeatureDim,activation=tf.nn.relu,name='fc_7') #shape [batch_size*allFeatureDim]
+                # # loop fc7
+                # self.fc_7 = tf.layers.dense(self.hid_8,allFeatureDim,activation=tf.nn.relu,name='fc_7') #shape [batch_size*allFeatureDim]
                 
-                self.hid_9 = tf.reshape(self.fc_7,[-1,1,allFeatureDim])     #shape [batch_size*1*allFeatureDim] loop output
+                # self.hid_9 = tf.reshape(self.fc_7,[-1,1,allFeatureDim])     #shape [batch_size*1*allFeatureDim] loop output
 
     def conv_layer(self, bottom, filtShape, name):
         with tf.variable_scope(name):
