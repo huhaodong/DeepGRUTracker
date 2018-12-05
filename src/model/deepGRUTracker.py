@@ -25,9 +25,10 @@ class DeepGRUTracker:
         isTrain = opt["superOpt"].is_train
         nnKeepProb = opt["superOpt"].nn_keep_prob
         gruLarys = opt["superOpt"].gru_larys
+        gpuIndex = opt["superOpt"].gpu_index
 
         with tf.variable_scope('deep_gru_tracker'):
-            with tf.device("/gpu:1"):
+            with tf.device("/gpu:"+str(gpuIndex)):
                 # fc1 in order to weight the input det
                 self.x_det = tf.reshape(inputDet,[-1,maxTargetNumber*detDim],name='reshape_1')  #shape [batch_size*(max_target_number*det_dim)]
                 self.fc_1 = tf.layers.dense(self.x_det,detFeatureDim,activation=tf.nn.relu,name='fc_1') #shape [batch_size*detFeatureDim]
@@ -123,22 +124,21 @@ class DeepGRUTracker:
 
     def conv_layer(self, bottom, filtShape, name):
         with tf.variable_scope(name):
-            with tf.device("/gpu:1"):
-                filt = tf.get_variable("filt",shape=filtShape,
-                    initializer=tf.random_normal_initializer(dtype=tf.float32),
-                    dtype=tf.float32)
+            
+            filt = tf.get_variable("filt",shape=filtShape,
+                initializer=tf.random_normal_initializer(dtype=tf.float32),
+                dtype=tf.float32)
 
-                conv = tf.nn.conv2d(bottom, filt, [1, 1, 1, 1], padding='SAME')
+            conv = tf.nn.conv2d(bottom, filt, [1, 1, 1, 1], padding='SAME')
 
-                conv_biases = tf.get_variable("biases",shape=[filtShape[-1]],
-                    initializer=tf.random_normal_initializer(dtype=tf.float32),
-                    dtype=tf.float32)
-                bias = tf.nn.bias_add(conv, conv_biases)
+            conv_biases = tf.get_variable("biases",shape=[filtShape[-1]],
+                initializer=tf.random_normal_initializer(dtype=tf.float32),
+                dtype=tf.float32)
+            bias = tf.nn.bias_add(conv, conv_biases)
 
-                relu = tf.nn.relu(bias)
+            relu = tf.nn.relu(bias)
             return relu
 
     def max_pool(self, bottom, name):
-        with tf.device("/gpu:1"):
-            ret = tf.nn.max_pool(bottom, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME', name=name)
+        ret = tf.nn.max_pool(bottom, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME', name=name)
         return ret

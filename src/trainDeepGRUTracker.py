@@ -25,6 +25,7 @@ def train(opt):
     sequenceSize = opt.sequence_size
     bantchSize = opt.batch_size
     learnRate = opt.learn_rate
+    gpuIndex = opt.gpu_index
     # featrueHiddenSize = 34*60*512
 
     inputImage = tf.placeholder(
@@ -59,7 +60,7 @@ def train(opt):
 
     saver = tf.train.Saver(max_to_keep=3)
     with tf.Session(config=tfconfig) as sess:
-        with tf.device("/gpu:1"):
+        with tf.device("/gpu:"+str(gpuIndex)):
 
             sess.run(init)
             if loadEpoch != 0:

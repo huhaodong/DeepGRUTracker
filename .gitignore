@@ -3,3 +3,5 @@ __pycache__
 data/log/*
 data/model/*
 data/vgg/model_npy/*
+result/*
+.vscode

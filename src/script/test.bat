@@ -1,0 +1,1 @@
+python ../main.py --test --batch_size=1 --load_epoch=960 --gru_keep_prob=1.0 --nn_keep_prob=1.0 --gpu_index=1
