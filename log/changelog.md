@@ -7,3 +7,4 @@
 |v0.0.1|2018/11/25|完成有反馈模型|model_add_sequence|
 |v0.0.2|2018/11/28|去除反馈机制。只利用GRU内部的特征保留机制。对应分支modify_model|modify_model|
 |v1.0.1|2018/12/5|添加config模块,完成第一版本的模型|v1.0.1-completed|
+|v2.0.1|2018/12/14|增加模型复杂度，模型学习残差|v2.0.1-residual_deep_GRU_tracker|

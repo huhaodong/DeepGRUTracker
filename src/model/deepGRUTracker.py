@@ -8,7 +8,10 @@ class DeepGRUTracker:
 
         inputImage = opt["input_image"]
         inputDet = opt["input_det"]
+        tmpTrack = opt["tmp_track"]
         inputSequence = opt["sequence"] #shape [batchSize*(sequenceSize-1)*allFeatureDime]
+        picFeatureSequence = opt["picFeatureSequence"] #shape [batchSize*(sequenceSize-1)*picFeatureDime]
+        detFeatureSequence = opt["detFeatureSequence"] #shape [batchSize*(sequenceSize-1)*detFeatureDime]
         maxTargetNumber = opt["superOpt"].max_target_number
         detDim = opt["superOpt"].det_dim
         batchSize = opt["superOpt"].batch_size
@@ -33,6 +36,25 @@ class DeepGRUTracker:
                 self.x_det = tf.reshape(inputDet,[-1,maxTargetNumber*detDim],name='reshape_1')  #shape [batch_size*(max_target_number*det_dim)]
                 self.fc_1 = tf.layers.dense(self.x_det,detFeatureDim,activation=tf.nn.relu,name='fc_1') #shape [batch_size*detFeatureDim]
                 self.fc_1 = tf.nn.dropout(self.fc_1,nnKeepProb)
+
+                ## det feature for gru net
+                self.hid_fc_1 = tf.reshape(self.fc_1,[-1,1,detFeatureDim])     #shape [batch_size*1*detFeatureDim]
+
+                self.hid_det_seq = tf.concat(values=[detFeatureSequence,self.hid_fc_1],axis=1, name='det_seq_concat')  #shape [batch_size*sequenceSize*detFeatureDim]
+                
+                with tf.variable_scope('gru_det') as scope:
+                    self.gru_det = deepGRU.deepGRUNet(
+                        self.hid_det_seq,
+                        batchSize=batchSize,
+                        _scopeName='deep_gru_det',
+                        is_train=isTrain,
+                        keep_prob=gruKeepProb,
+                        n_layer=2,
+                        n_hidden=gruHideSize
+                        ) #shape [sequenceSize*batch_size*gru_hide_size]
+
+                self.hid_det_add = tf.add(self.gru_det[-1],self.fc_1,name='add_det')
+
                 # self.hid_1 = tf.reshape(self.fc_1,[-1,inputHSize,inputWSize,1],name='reshap_fc_1')
                 # self.hid_1 = tf.concat([self.hid_1,self.hid_1,self.hid_1],3,name="concat_hid_1")    #shape [batch_size*input_h_size*input_w_size*3]
 
@@ -63,12 +85,30 @@ class DeepGRUTracker:
                 self.fc_2 = tf.layers.dense(self.hid_2,picFeatureDim,activation=tf.nn.relu,name='fc_2') #shape [batch_size*picFeatureDim]
                 self.fc_2 = tf.nn.dropout(self.fc_2,nnKeepProb)
 
-                # normalization
-                self.nor_1 = tf.nn.l2_normalize(self.fc_2, axis=1)
-                self.nor_2 = tf.nn.l2_normalize(self.fc_1, axis=1)
+                ## pic feature for gru net 
+                self.hid_fc_2 = tf.reshape(self.fc_2,[-1,1,picFeatureDim])     #shape [batch_size*1*picFeatureDim]
+
+                self.hid_pic_seq = tf.concat(values=[picFeatureSequence,self.hid_fc_2],axis=1, name='det_pic_concat')  #shape [batch_size*sequenceSize*picFeatureDim]
                 
-                self.nor_1_shape = self.nor_1.get_shape().as_list()
-                self.nor_2_shape = self.nor_2.get_shape().as_list()
+                with tf.variable_scope('gru_pic') as scope:
+                    self.gru_pic = deepGRU.deepGRUNet(
+                        self.hid_pic_seq,
+                        batchSize=batchSize,
+                        _scopeName='deep_gru_pic',
+                        is_train=isTrain,
+                        keep_prob=gruKeepProb,
+                        n_layer=2,
+                        n_hidden=gruHideSize
+                        ) #shape [sequenceSize*batch_size*gru_hide_size]
+
+                self.hid_pic_add = tf.add(self.gru_pic[-1],self.fc_2,name='add_pic')
+
+                # normalization
+                self.nor_1 = tf.nn.l2_normalize(self.hid_pic_add, axis=1)
+                self.nor_2 = tf.nn.l2_normalize(self.hid_det_add, axis=1)
+                
+                # self.nor_1_shape = self.nor_1.get_shape().as_list()
+                # self.nor_2_shape = self.nor_2.get_shape().as_list()
 
                 # concat dim feature and pic feature
                 self.hid_3 = tf.concat(values=[self.nor_1,self.nor_2], axis=1, name='concat_1')  #shape [batch_size*(picFeatureDim+detFeatureDim)]
@@ -87,24 +127,28 @@ class DeepGRUTracker:
                 # self.hid_5_shape = self.hid_5.get_shape().as_list()
                 # deep GRU net
                 # self.hid_4 = tf.reshape(self.hid_5,[-1,maxTargetNumber,gruHideSize],name='hid_4') #shape [batch_size*max_target_number*gru_hide_size]
-                self.gru_1 = deepGRU.deepGRUNet(
-                    self.hid_5,
-                    batchSize=batchSize,
-                    _scopeName='deep_gru',
-                    is_train=isTrain,
-                    keep_prob=gruKeepProb,
-                    n_layer=1,
-                    n_hidden=gruHideSize
-                    ) #shape [sequenceSize*batch_size*gru_hide_size]
-
+                with tf.variable_scope('gru_fuse') as scope:
+                    self.gru_1 = deepGRU.deepGRUNet(
+                        self.hid_5,
+                        batchSize=batchSize,
+                        _scopeName='deep_gru',
+                        is_train=isTrain,
+                        keep_prob=gruKeepProb,
+                        n_layer=gruLarys,
+                        n_hidden=gruHideSize
+                        ) #shape [sequenceSize*batch_size*gru_hide_size]
+                self.hid_fuse_add = tf.add(self.gru_1[-1],self.fc_3,name='add_fuse')
                 # fc4
                 # self.hid_5 = tf.reshape(self.gru_1[-1],[-1,maxTargetNumber*gruHideSize],name='hid_5')   #shape [batch_size*(max_target_number*gru_hide_size)]
-                self.fc_4 = tf.layers.dense(self.gru_1[-1],maxTargetNumber*fcSecHiddenSize,activation=tf.nn.relu,name='fc_4') #shape [batch_size*(maxTargetNumber*fcSecHiddenSize)]
+                self.fc_4 = tf.layers.dense(self.hid_fuse_add,maxTargetNumber*fcSecHiddenSize,activation=tf.nn.relu,name='fc_4') #shape [batch_size*(maxTargetNumber*fcSecHiddenSize)]
                 self.fc_4 = tf.nn.dropout(self.fc_4,nnKeepProb)
 
                 # fc5
                 self.fc_5 = tf.layers.dense(self.fc_4,maxTargetNumber*productDim,name='fc_5')    #shape [batch_size*(maxTargetNumber*productDim)]
-                self.hid_6 = tf.reshape(self.fc_5,[-1,maxTargetNumber,productDim],name="hid_6")  #shape [batch_size*maxTargetNumber*productDim] product output
+                self.hid_6 = tf.reshape(self.fc_5,[-1,maxTargetNumber,productDim],name="hid_6")  #shape [batch_size*maxTargetNumber*productDim] residual result
+
+                # output v2.0.1
+                self.hid_7 = tf.add(self.hid_6,tmpTrack,name='hid_7')   #shape [batch_size*maxTargetNumber*productDim] product output
 
                 # # loop fc6
                 # self.hid_7 = tf.reshape(self.hid_6,[-1,maxTargetNumber*productDim],name='hid_7')  #shape [batch_size*(max_target_number*productDim)]
