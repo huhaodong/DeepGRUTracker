@@ -37,9 +37,6 @@ def train(opt):
     inputGt = tf.placeholder(
         tf.float32, shape=[None, maxTargetNumber, productDim], name='gt')
 
-    tmpTrack = tf.placeholder(
-        tf.float32, shape=[None, maxTargetNumber, productDim], name='tmp_track')
-
     fuseSequence = tf.placeholder(
         tf.float32, shape=[None, sequenceSize, allFeatureDim], name='fuse_sequence')
     
@@ -52,7 +49,6 @@ def train(opt):
     modelArgs = {
         'input_image': inputImage,
         'input_det': inputDet,
-        'tmp_track': tmpTrack,
         'sequence': fuseSequence,
         'picFeatureSequence': picFeatureSequence,
         'detFeatureSequence': detFeatureSequence,
@@ -61,7 +57,7 @@ def train(opt):
 
     tracker = deepGRUTracker.DeepGRUTracker(modelArgs)
 
-    loss = tf.reduce_mean(tf.pow(tf.subtract(inputGt, tracker.hid_7), 2.0))
+    loss = tf.reduce_mean(tf.pow(tf.subtract(inputGt, tracker.hid_6), 2.0))
     tf.summary.scalar("loss_function", loss)
 
     optimiz = tf.train.AdamOptimizer()
@@ -93,16 +89,14 @@ def train(opt):
                 sequence = np.zeros((bantchSize, sequenceSize, allFeatureDim))
                 detsequence = np.zeros((bantchSize, sequenceSize, detFeatureDim))
                 picsequence = np.zeros((bantchSize, sequenceSize, picFeatureDim))
-                tmptrack = np.zeros((bantchSize, maxTargetNumber, productDim))
 
                 while True:
                     if data['img'] == [] or data['det'] == []:
                         break
-                    _, hid_7 ,hid_4, hid_det, hid_pic = sess.run([train, tracker.hid_7, tracker.hid_4, tracker.hid_fc_1, tracker.hid_fc_2], 
+                    _,hid_4, hid_det, hid_pic = sess.run([train, tracker.hid_4, tracker.hid_fc_1, tracker.hid_fc_2], 
                                                                 feed_dict={inputImage: data['img'],
                                                                           inputDet: data['det'],
                                                                           inputGt: data['gt'],
-                                                                          tmpTrack: tmptrack,
                                                                           fuseSequence: sequence,
                                                                           picFeatureSequence: picsequence,
                                                                           detFeatureSequence: detsequence
@@ -111,7 +105,6 @@ def train(opt):
                     summary_str = sess.run(merged_summary_op, feed_dict={inputImage: data['img'],
                                                                          inputDet: data['det'],
                                                                          inputGt: data['gt'],
-                                                                         tmpTrack: tmptrack,
                                                                          fuseSequence: sequence,
                                                                          picFeatureSequence: picsequence,
                                                                          detFeatureSequence: detsequence
@@ -130,7 +123,6 @@ def train(opt):
                     sequence = np.concatenate((seqlist[-1], hid_4), axis=1)
                     detsequence = np.concatenate((detseqlist[-1], hid_det), axis=1)
                     picsequence = np.concatenate((picseqlist[-1], hid_pic), axis=1)
-                    tmptrack = hid_7
 
                     data = dataLoder.next()
 
