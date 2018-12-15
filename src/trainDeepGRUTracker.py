@@ -52,7 +52,7 @@ def train(opt):
     modelArgs = {
         'input_image': inputImage,
         'input_det': inputDet,
-        'tmp_track': tmpTrack
+        'tmp_track': tmpTrack,
         'sequence': fuseSequence,
         'picFeatureSequence': picFeatureSequence,
         'detFeatureSequence': detFeatureSequence,
@@ -89,7 +89,7 @@ def train(opt):
                 dataLoder = loadData.DataLoader(opt)
                 dataLoder.flashLoader()
                 data = dataLoder.next()
-                # sequence = tf.Variable(tf.zeros([bantchSize,sequenceSize,allFeatureDim]),tf.float32)
+                # sequence = tf.Variable(tf.zeros([bantcSize,sequenceSize,allFeatureDim]),tf.float32)
                 sequence = np.zeros((bantchSize, sequenceSize, allFeatureDim))
                 detsequence = np.zeros((bantchSize, sequenceSize, detFeatureDim))
                 picsequence = np.zeros((bantchSize, sequenceSize, picFeatureDim))
@@ -131,7 +131,7 @@ def train(opt):
                     detsequence = np.concatenate((detseqlist[-1], hid_det), axis=1)
                     picsequence = np.concatenate((picseqlist[-1], hid_pic), axis=1)
                     tmptrack = hid_7
-                    
+
                     data = dataLoder.next()
 
                 dataLoder.endLoader()
