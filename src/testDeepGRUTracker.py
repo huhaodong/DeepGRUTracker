@@ -34,13 +34,21 @@ def test(opt):
     # inputGt = tf.placeholder(
     #     tf.float32, shape=[None, maxTargetNumber, productDim], name='gt')
 
-    tmpSequence = tf.placeholder(
-        tf.float32, shape=[None, sequenceSize, allFeatureDim], name='tmp_sequence')
+    fuseSequence = tf.placeholder(
+        tf.float32, shape=[None, sequenceSize, allFeatureDim], name='fuse_sequence')
+    
+    picFeatureSequence = tf.placeholder(
+        tf.float32, shape=[None, sequenceSize, picFeatureDim], name='pic_feature_sequence')
+
+    detFeatureSequence = tf.placeholder(
+        tf.float32, shape=[None, sequenceSize, detFeatureDim], name='det_feature_sequence')
 
     modelArgs = {
         'input_image': inputImage,
         'input_det': inputDet,
-        'sequence': tmpSequence,
+        'sequence': fuseSequence,
+        'picFeatureSequence': picFeatureSequence,
+        'detFeatureSequence': detFeatureSequence,
         'superOpt': opt
     }
 
@@ -67,15 +75,21 @@ def test(opt):
                 data = dataLoder.next()
                 # sequence = tf.Variable(tf.zeros([bantchSize,sequenceSize,allFeatureDim]),tf.float32)
                 sequence = np.zeros((bantchSize, sequenceSize, allFeatureDim))
+                detsequence = np.zeros((bantchSize, sequenceSize, detFeatureDim))
+                picsequence = np.zeros((bantchSize, sequenceSize, picFeatureDim))
+
                 resultMap = {}
                 frameIndex = 0
                 while True:
                     frameIndex += 1
                     if data['img'] == [] or data['det'] == []:
                         break
-                    hid_6, hid_4 = sess.run([tracker.hid_6,tracker.hid_4], feed_dict={inputImage: data['img'],
+                    hid_6, hid_4, hid_det, hid_pic = sess.run([tracker.hid_6, tracker.hid_4, tracker.hid_fc_1, tracker.hid_fc_2], 
+                                                                feed_dict={inputImage: data['img'],
                                                                           inputDet: data['det'],
-                                                                          tmpSequence: sequence
+                                                                          fuseSequence: sequence,
+                                                                          picFeatureSequence: picsequence,
+                                                                          detFeatureSequence: detsequence
                                                                           })
                     # new sequence
                     # _,keepSeq = tf.split(1,sequence,[1,sequenceSize-1])
@@ -84,8 +98,14 @@ def test(opt):
                     resultMap[frameIndex] = tf.floor(hid_6[0])
 
                     seqlist = np.split(sequence, [1], 1)
+                    detseqlist = np.split(detsequence, [1], 1)
+                    picseqlist = np.split(picsequence, [1], 1)
+
                     # hid9Numpy = hid9.eval(session=sess)
                     sequence = np.concatenate((seqlist[-1], hid_4), axis=1)
+                    detsequence = np.concatenate((detseqlist[-1], hid_det), axis=1)
+                    picsequence = np.concatenate((picseqlist[-1], hid_pic), axis=1)
+                    
                     data = dataLoder.next()
                 dataWriter.writerTrackerResult(resultMap,trackerResultPath,str(i)+'.txt')
                 resultMap.clear()
