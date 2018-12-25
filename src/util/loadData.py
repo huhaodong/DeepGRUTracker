@@ -56,7 +56,9 @@ class DataLoader:
             tmpPath = os.path.join(self.workPath, self.workDirs[i])
             if not os.path.isdir(tmpPath):
                 del self.workDirs[i]
-
+        print("in data loader")
+        for i in self.workDirs:
+            print("++"+i)
     def flashLoader(self, gtFlage=True):
         self.loaderIndex = self.imgBeginIndex
         self.imgCacheIndex = self.imgBeginIndex

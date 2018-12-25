@@ -23,6 +23,8 @@ def test(opt):
     bantchSize = opt.batch_size
     trackerResultPath = opt.tracker_result_path
     testLoopSize = opt.test_loop_size
+    picFeatureDim = opt.pic_feature_dim
+    detFeatureDim= opt.det_feature_dim
     gpuIndex = opt.gpu_index
     # featrueHiddenSize = 34*60*512
 
@@ -68,9 +70,8 @@ def test(opt):
             if loadEpoch != 0:
                 saver.restore(sess, os.path.join(
                     modelSavePath, "deep_GRU_tracker.cpkt-"+str(loadEpoch)))
-            
+            dataLoder = loadData.DataLoader(opt)
             for i in range(testLoopSize):
-                dataLoder = loadData.DataLoader(opt)
                 dataLoder.flashLoader()
                 data = dataLoder.next()
                 # sequence = tf.Variable(tf.zeros([bantchSize,sequenceSize,allFeatureDim]),tf.float32)

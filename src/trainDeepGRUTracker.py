@@ -59,6 +59,10 @@ def train(opt):
 
     loss = tf.reduce_mean(tf.pow(tf.subtract(inputGt, tracker.hid_6), 2.0))
     tf.summary.scalar("loss_function", loss)
+    tf.summary.image("inputimage",inputImage)
+    tf.summary.histogram('hid_det_add',tracker.hid_det_add)
+    tf.summary.histogram('hid_pic_add',tracker.hid_pic_add)
+    tf.summary.histogram('fc_3',tracker.fc_3)
 
     optimiz = tf.train.AdamOptimizer()
     train = optimiz.minimize(loss)
@@ -81,8 +85,8 @@ def train(opt):
                 summaryLogSavePath, sess.graph)
             loopEnd = epoch+1
             loopStart = loadEpoch+1
+            dataLoder = loadData.DataLoader(opt)
             for i in range(loopStart, loopEnd):
-                dataLoder = loadData.DataLoader(opt)
                 dataLoder.flashLoader()
                 data = dataLoder.next()
                 # sequence = tf.Variable(tf.zeros([bantcSize,sequenceSize,allFeatureDim]),tf.float32)

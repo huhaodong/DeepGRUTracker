@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import cv2
 
 def gather_sequence_info(sequence_dir, detection_file):
     """Gather sequence information, such as image filenames, detections,
