@@ -71,8 +71,8 @@ def train(opt):
                 summaryLogSavePath, sess.graph)
             loopEnd = epoch+1
             loopStart = loadEpoch+1
+            dataLoder = loadData.DataLoader(opt)
             for i in range(loopStart, loopEnd):
-                dataLoder = loadData.DataLoader(opt)
                 dataLoder.flashLoader()
                 data = dataLoder.next()
                 # sequence = tf.Variable(tf.zeros([bantchSize,sequenceSize,allFeatureDim]),tf.float32)

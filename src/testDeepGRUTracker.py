@@ -60,9 +60,8 @@ def test(opt):
             if loadEpoch != 0:
                 saver.restore(sess, os.path.join(
                     modelSavePath, "deep_GRU_tracker.cpkt-"+str(loadEpoch)))
-            
+            dataLoder = loadData.DataLoader(opt)
             for i in range(testLoopSize):
-                dataLoder = loadData.DataLoader(opt)
                 dataLoder.flashLoader()
                 data = dataLoder.next()
                 # sequence = tf.Variable(tf.zeros([bantchSize,sequenceSize,allFeatureDim]),tf.float32)
