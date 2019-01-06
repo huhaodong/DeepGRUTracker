@@ -59,10 +59,13 @@ def train(opt):
 
     loss = tf.reduce_mean(tf.pow(tf.subtract(inputGt, tracker.hid_6), 2.0))
     tf.summary.scalar("loss_function", loss)
-    tf.summary.image("inputimage",inputImage)
-    tf.summary.histogram('hid_det_add',tracker.hid_det_add)
-    tf.summary.histogram('hid_pic_add',tracker.hid_pic_add)
-    tf.summary.histogram('fc_3',tracker.fc_3)
+    # tf.summary.image("inputimage",inputImage)
+    # tf.summary.histogram('hid_det_add',tracker.hid_det_add)
+    # tf.summary.histogram('hid_pic_add',tracker.hid_pic_add)
+    # tf.summary.histogram('fc_3',tracker.fc_3)
+    # tf.summary.histogram('hid_fuse_add',tracker.hid_fuse_add)
+    # tf.summary.histogram('fc_4',tracker.fc_4)
+    # tf.summary.histogram('fc_5',tracker.fc_5)
 
     optimiz = tf.train.AdamOptimizer()
     train = optimiz.minimize(loss)
