@@ -20,11 +20,11 @@ def parse_args():
         required=False,default='F:\\work\\database\\MOT16\\test_tmp')
     parser.add_argument(
         "--result_dir", help="Path to the folder with tracking output.",
-        required=False,default='F:\\work\\workspace\\DeepGRUTracker\\result')
+        required=False,default='F:\\work\\experiment\\deepGruTracker\\result\\v1.0.0\\test6000\\result')
     parser.add_argument(
         "--output_dir", help="Folder to store the videos in. Will be created "
         "if it does not exist.",
-        required=False,default='F:\\work\\experiment\\deepGruTracker')
+        required=False,default='F:\\work\\experiment\\deepGruTracker\\result\\v1.0.0\\test6000')
     parser.add_argument(
         "--convert_h264", help="If true, convert videos to libx264 (requires "
         "FFMPEG", default=False)
