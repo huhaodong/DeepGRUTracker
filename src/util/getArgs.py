@@ -52,5 +52,5 @@ def getCmdArgs():
     parser.add_argument("--model_save_epoch",help="set model save epoch",default=3)
     parser.add_argument("--gpu_index",help="set model save epoch",default=0,type=int)
     parser.add_argument("--summary_log_save_path",help="set model summary save path",default='F:\\work\\workspace\\DeepGRUTracker\\data\\log')
-    parser.add_argument("--config_path",help="set config file path",default='F:\\work\\workspace\\DeepGRUTracker\\config\\test.ini')
+    parser.add_argument("--config_path",help="set config file path",default='F:\\work\\workspace\\DeepGRUTracker\\config\\train.ini')
     return parser.parse_args()
