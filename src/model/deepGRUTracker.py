@@ -26,13 +26,15 @@ class DeepGRUTracker:
         nnKeepProb = opt["superOpt"].nn_keep_prob
         gruLarys = opt["superOpt"].gru_larys
         gpuIndex = opt["superOpt"].gpu_index
-
+        self.gpuIndex = gpuIndex
         with tf.variable_scope('deep_gru_tracker'):
             with tf.device("/gpu:"+str(gpuIndex)):
                 # fc1 in order to weight the input det
                 self.x_det = tf.reshape(inputDet,[-1,maxTargetNumber*detDim],name='reshape_1')  #shape [batch_size*(max_target_number*det_dim)]
-                self.fc_1 = tf.layers.dense(self.x_det,detFeatureDim,activation=tf.nn.relu,name='fc_1') #shape [batch_size*detFeatureDim]
-                self.fc_1 = tf.nn.dropout(self.fc_1,nnKeepProb)
+                self.fc_1 = tf.layers.dense(self.x_det,detFeatureDim,name='fc_1') #shape [batch_size*detFeatureDim]
+                self.fc_1_nor = self.normalization_layer(self.fc_1,detFeatureDim,name="fc_1_nor")
+                self.fc_1_relu = tf.nn.relu(self.fc_1_nor)
+                self.fc_1 = tf.nn.dropout(self.fc_1_relu,nnKeepProb)
                 # self.hid_1 = tf.reshape(self.fc_1,[-1,inputHSize,inputWSize,1],name='reshap_fc_1')
                 # self.hid_1 = tf.concat([self.hid_1,self.hid_1,self.hid_1],3,name="concat_hid_1")    #shape [batch_size*input_h_size*input_w_size*3]
 
@@ -60,8 +62,10 @@ class DeepGRUTracker:
                 for d in featchMapShape[1:]:
                     featchMapDim *= d
                 self.hid_2 = tf.reshape(self.pool_2,[-1,featchMapDim],name='reshape_2')
-                self.fc_2 = tf.layers.dense(self.hid_2,picFeatureDim,activation=tf.nn.relu,name='fc_2') #shape [batch_size*picFeatureDim]
-                self.fc_2 = tf.nn.dropout(self.fc_2,nnKeepProb)
+                self.fc_2 = tf.layers.dense(self.hid_2,picFeatureDim,name='fc_2') #shape [batch_size*picFeatureDim]
+                self.fc_2_nor = self.normalization_layer(self.fc_2,picFeatureDim,name="fc_2_nor")
+                self.fc_2_relu = tf.nn.relu(self.fc_2_nor)
+                self.fc_2 = tf.nn.dropout(self.fc_2_relu,nnKeepProb)
 
                 # normalization
                 self.nor_1 = tf.nn.l2_normalize(self.fc_2, axis=1)
@@ -75,8 +79,10 @@ class DeepGRUTracker:
                 self.hid_3_shape = self.hid_3.get_shape().as_list()
 
                 # fc3
-                self.fc_3 = tf.layers.dense(self.hid_3,allFeatureDim,activation=tf.nn.relu,name='fc_3') #shape [batch_size*allFeatureDim]
-                self.fc_3 = tf.nn.dropout(self.fc_3,nnKeepProb)
+                self.fc_3 = tf.layers.dense(self.hid_3,allFeatureDim,name='fc_3') #shape [batch_size*allFeatureDim]
+                self.fc_3_nor = self.normalization_layer(self.fc_3,allFeatureDim,name="fc_3_nor")
+                self.fc_3_relu = tf.nn.relu(self.fc_3_nor)
+                self.fc_3 = tf.nn.dropout(self.fc_3_relu,nnKeepProb)
 
                 self.fc_3_shape = self.fc_3.get_shape().as_list()
 
@@ -93,14 +99,16 @@ class DeepGRUTracker:
                     _scopeName='deep_gru',
                     is_train=isTrain,
                     keep_prob=gruKeepProb,
-                    n_layer=1,
+                    n_layer=gruLarys,
                     n_hidden=gruHideSize
                     ) #shape [sequenceSize*batch_size*gru_hide_size]
 
                 # fc4
                 # self.hid_5 = tf.reshape(self.gru_1[-1],[-1,maxTargetNumber*gruHideSize],name='hid_5')   #shape [batch_size*(max_target_number*gru_hide_size)]
-                self.fc_4 = tf.layers.dense(self.gru_1[-1],maxTargetNumber*fcSecHiddenSize,activation=tf.nn.relu,name='fc_4') #shape [batch_size*(maxTargetNumber*fcSecHiddenSize)]
-                self.fc_4 = tf.nn.dropout(self.fc_4,nnKeepProb)
+                self.fc_4 = tf.layers.dense(self.gru_1[-1],maxTargetNumber*fcSecHiddenSize,name='fc_4') #shape [batch_size*(maxTargetNumber*fcSecHiddenSize)]
+                self.fc_4_nor = self.normalization_layer(self.fc_4,maxTargetNumber*fcSecHiddenSize,name="fc_4_nor")
+                self.fc_4_relu = tf.nn.relu(self.fc_4_nor)
+                self.fc_4 = tf.nn.dropout(self.fc_4_relu,nnKeepProb)
 
                 # fc5
                 self.fc_5 = tf.layers.dense(self.fc_4,maxTargetNumber*productDim,name='fc_5')    #shape [batch_size*(maxTargetNumber*productDim)]
@@ -138,6 +146,18 @@ class DeepGRUTracker:
 
             relu = tf.nn.relu(bias)
             return relu
+
+    def normalization_layer(self, input, out_dime, name=None, axes=[0], epsilon=0.001):
+        with tf.variable_scope(name):
+            with tf.device("/gpu:"+str(self.gpuIndex)):
+                fc_mean, fc_var = tf.nn.moments(
+                    input,
+                    axes=axes
+                )
+                scale = tf.Variable(tf.ones([out_dime]))
+                shift = tf.Variable(tf.zeros([out_dime]))
+                output = tf.nn.batch_normalization(input, fc_mean, fc_var, shift, scale, epsilon)
+                return output
 
     def max_pool(self, bottom, name):
         ret = tf.nn.max_pool(bottom, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME', name=name)
