@@ -49,11 +49,11 @@ def train(opt):
 
     loss = tf.reduce_mean(tf.pow(tf.subtract(inputGt, tracker.hid_6), 2.0))
     tf.summary.scalar("loss_function", loss)
-    tf.summary.histogram('fc1',tracker.fc_1)
-    tf.summary.histogram('fc2',tracker.fc_2)
-    tf.summary.histogram('fc3',tracker.fc_3)
-    tf.summary.histogram('fc4',tracker.fc_4)
-    tf.summary.histogram('fc5',tracker.fc_5)
+    # tf.summary.histogram('fc1',tracker.fc_1)
+    # tf.summary.histogram('fc2',tracker.fc_2)
+    # tf.summary.histogram('fc3',tracker.fc_3)
+    # tf.summary.histogram('fc4',tracker.fc_4)
+    # tf.summary.histogram('fc5',tracker.fc_5)
 
     optimiz = tf.train.AdamOptimizer()
     train = optimiz.minimize(loss)
@@ -61,7 +61,7 @@ def train(opt):
     init = tf.global_variables_initializer()
 
     tfconfig = tf.ConfigProto(
-        log_device_placement=True, allow_soft_placement=True)
+        log_device_placement=True, allow_soft_placement=False)
 
     saver = tf.train.Saver(max_to_keep=3)
     with tf.Session(config=tfconfig) as sess:
