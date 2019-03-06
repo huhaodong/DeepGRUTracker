@@ -61,7 +61,7 @@ def train(opt):
     init = tf.global_variables_initializer()
 
     tfconfig = tf.ConfigProto(
-        log_device_placement=True, allow_soft_placement=False)
+        log_device_placement=True, allow_soft_placement=True)
 
     saver = tf.train.Saver(max_to_keep=3)
     with tf.Session(config=tfconfig) as sess:
