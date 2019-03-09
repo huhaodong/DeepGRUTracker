@@ -24,8 +24,9 @@ def train(opt):
     allFeatureDim = opt.all_feature_dim
     sequenceSize = opt.sequence_size
     bantchSize = opt.batch_size
-    learnRate = opt.learn_rate
+    # learnRate = opt.learn_rate
     gpuIndex = opt.gpu_index
+    
     # featrueHiddenSize = 34*60*512
 
     inputImage = tf.placeholder(
@@ -82,6 +83,7 @@ def train(opt):
                 data = dataLoder.next()
                 # sequence = tf.Variable(tf.zeros([bantchSize,sequenceSize,allFeatureDim]),tf.float32)
                 sequence = np.zeros((bantchSize, sequenceSize, allFeatureDim))
+                
                 while True:
                     if data['img'] == [] or data['det'] == []:
                         break
@@ -106,6 +108,7 @@ def train(opt):
                     sequence = np.concatenate((seqlist[-1], hid_4), axis=1)
 
                     data = dataLoder.next()
+                    
 
                 dataLoder.endLoader()
                 print('epoch:', str(i), " finished!")
