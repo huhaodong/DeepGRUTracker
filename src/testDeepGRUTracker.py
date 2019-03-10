@@ -25,7 +25,7 @@ def test(opt):
     testLoopSize = opt.test_loop_size
     gpuIndex = opt.gpu_index
     # featrueHiddenSize = 34*60*512
-    featureMapOutputPath = "F:\\work\\experiment\\deepGruTracker\\result\\v1.0.0\\featureMap\\MOT16-09-pool2"
+    featureMapOutputPath = "F:\\work\\experiment\\deepGruTracker\\result\\v1.0.0\\featureMap\\14600+\\MOT16-08-pool2"
 
     inputImage = tf.placeholder(
         tf.float32, shape=[None, inputHSize, inputWSize, 3], name='input_images')
