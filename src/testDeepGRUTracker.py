@@ -4,7 +4,7 @@ import model.deepGRUTracker as deepGRUTracker
 import os
 import numpy as np
 import util.dataWriter as dataWriter
-
+import util.show as show
 
 def test(opt):
     ''' train deep GRU tracker '''
@@ -27,6 +27,7 @@ def test(opt):
     detFeatureDim= opt.det_feature_dim
     gpuIndex = opt.gpu_index
     # featrueHiddenSize = 34*60*512
+    featureMapOutputPath = "F:\\work\\experiment\\deepGruTracker\\result\\v2.0.2\\featureMap\\13000+\\MOT16-09-pool2"
 
     inputImage = tf.placeholder(
         tf.float32, shape=[None, inputHSize, inputWSize, 3], name='input_images')
@@ -81,11 +82,14 @@ def test(opt):
 
                 resultMap = {}
                 frameIndex = 0
+
+                imageCountor = 1
+
                 while True:
                     frameIndex += 1
                     if data['img'] == [] or data['det'] == []:
                         break
-                    hid_6, hid_4, hid_det, hid_pic = sess.run([tracker.hid_6, tracker.hid_4, tracker.hid_fc_1, tracker.hid_fc_2], 
+                    hid_6, hid_4, hid_det, hid_pic, oriFeature = sess.run([tracker.hid_6, tracker.hid_4, tracker.hid_fc_1, tracker.hid_fc_2, tracker.pool_2], 
                                                                 feed_dict={inputImage: data['img'],
                                                                           inputDet: data['det'],
                                                                           fuseSequence: sequence,
@@ -106,8 +110,17 @@ def test(opt):
                     sequence = np.concatenate((seqlist[-1], hid_4), axis=1)
                     detsequence = np.concatenate((detseqlist[-1], hid_det), axis=1)
                     picsequence = np.concatenate((picseqlist[-1], hid_pic), axis=1)
+
+                    # save the feature map picture
+                    featureMap = oriFeature[0]
+                    orImage = data['img'][0]
+                    fmOutputPath = os.path.join(featureMapOutputPath,str(imageCountor)+'.png')
+                    show.saveFeatureMap(img=orImage ,featureMap=featureMap ,outputPath=fmOutputPath)
                     
                     data = dataLoder.next()
+
+                    imageCountor += 1
+
                 dataWriter.writerTrackerResult(resultMap,trackerResultPath,str(i)+'.txt')
                 resultMap.clear()
                 dataLoder.endLoader()
